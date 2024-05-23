@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -29,7 +31,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string The hashed password
      */
     #[ORM\Column]
-    private ?string $password = null;
+    private string $password;
+
+    /**
+     * @var Collection<int, UserToken>
+     */
+    #[ORM\OneToMany(targetEntity: UserToken::class, mappedBy: 'user', orphanRemoval: true)]
+    private Collection $userTokens;
+
+    public function __construct()
+    {
+        $this->userTokens = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -104,5 +117,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         // If you store any temporary, sensitive data on the user, clear it here
         // $this->plainPassword = null;
+    }
+
+    /**
+     * @return Collection<int, UserToken>
+     */
+    public function getUserTokens(): Collection
+    {
+        return $this->userTokens;
+    }
+
+    public function addUserToken(UserToken $userToken): static
+    {
+        if (!$this->userTokens->contains($userToken)) {
+            $this->userTokens->add($userToken);
+            $userToken->setUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserToken(UserToken $userToken): static
+    {
+        if ($this->userTokens->removeElement($userToken)) {
+            // set the owning side to null (unless already changed)
+            if ($userToken->getUser() === $this) {
+                $userToken->setUser(null);
+            }
+        }
+
+        return $this;
     }
 }
